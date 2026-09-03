@@ -7,23 +7,28 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    #map { height: calc(100vh - 56px); }
+    #map { height: calc(100vh - 56px); z-index: 1; }
+    /* 確保輸入框可以被點選與聚焦 */
+    input, textarea, select {
+      -webkit-user-select: auto !important;
+      user-select: auto !important;
+    }
   </style>
 </head>
-<body class="bg-gray-50 flex flex-col h-screen select-none">
+<body class="bg-gray-50 flex flex-col h-screen overflow-hidden">
 
   <!-- 頂部導覽列 -->
-  <header class="h-14 bg-white border-b px-4 flex items-center justify-between z-10 shrink-0">
+  <header class="h-14 bg-white border-b px-4 flex items-center justify-between z-10 shrink-0 shadow-sm">
     <div class="flex items-center gap-2">
       <span class="text-xl">🍜</span>
       <h1 class="font-bold text-gray-800 text-base">美食足跡</h1>
       <span id="recordCount" class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-mono">0</span>
     </div>
     <div class="flex items-center gap-2">
-      <button id="locateBtn" class="p-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-semibold active:bg-blue-100 flex items-center gap-1">
+      <button id="locateBtn" class="p-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-semibold active:bg-blue-100">
         📍 定位
       </button>
-      <button id="addBtn" class="bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1">
+      <button id="addBtn" class="bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm">
         ＋ 紀錄
       </button>
       <button id="backupBtn" class="p-2 text-gray-500 hover:text-gray-700 text-xs" title="匯出備份">
@@ -32,26 +37,27 @@
     </div>
   </header>
 
-  <!-- 地圖核心 -->
-  <div id="map" class="grow"></div>
+  <!-- 地圖容器 -->
+  <div id="map" class="grow w-full"></div>
 
-  <!-- 新增/編輯彈窗 Bottom Sheet -->
-  <div id="modal" class="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center hidden">
-    <div class="bg-white w-full sm:w-96 rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl space-y-3">
+  <!-- 新增彈窗（設定更高層級與背景阻擋） -->
+  <div id="modal" class="fixed inset-0 bg-black/50 z-[9999] flex items-end sm:items-center justify-center hidden">
+    <div class="bg-white w-full sm:w-96 rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl space-y-3 max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center pb-2 border-b">
-        <h3 class="font-bold text-gray-800">新增美食紀錄</h3>
-        <button id="closeModal" class="text-gray-400 hover:text-gray-600 text-lg">&times;</button>
+        <h3 class="font-bold text-gray-800 text-base">新增美食紀錄</h3>
+        <button id="closeModal" type="button" class="text-gray-400 hover:text-gray-600 text-2xl px-2 leading-none">&times;</button>
       </div>
       
       <div>
-        <label class="block text-xs font-semibold text-gray-600 mb-1">店名</label>
-        <input type="text" id="shopName" placeholder="例如：六千牛肉湯" class="w-full border rounded-lg p-2 text-sm focus:outline-blue-500">
+        <label class="block text-xs font-semibold text-gray-600 mb-1">店名 *</label>
+        <input type="text" id="shopName" placeholder="例如：六千牛肉湯" 
+               class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white">
       </div>
 
       <div class="grid grid-cols-2 gap-2">
         <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1">分類</label>
-          <select id="shopCategory" class="w-full border rounded-lg p-2 text-sm bg-white">
+          <select id="shopCategory" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white focus:outline-none">
             <option value="小吃">小吃</option>
             <option value="正餐">正餐</option>
             <option value="甜品/飲料">甜品/飲料</option>
@@ -61,7 +67,7 @@
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-600 mb-1">評分</label>
-          <select id="shopRating" class="w-full border rounded-lg p-2 text-sm bg-white">
+          <select id="shopRating" class="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white focus:outline-none">
             <option value="★★★★★">★★★★★ 必回訪</option>
             <option value="★★★★☆">★★★★☆ 很推薦</option>
             <option value="★★★☆☆">★★★☆☆ 普通過關</option>
@@ -72,24 +78,24 @@
 
       <div>
         <label class="block text-xs font-semibold text-gray-600 mb-1">心得 / 必點菜色</label>
-        <textarea id="shopNotes" rows="2" placeholder="備註推薦菜色、避雷點..." class="w-full border rounded-lg p-2 text-sm focus:outline-blue-500"></textarea>
+        <textarea id="shopNotes" rows="2" placeholder="推薦菜色、用餐避雷點..." 
+                  class="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white"></textarea>
       </div>
 
-      <div class="text-[11px] text-gray-400 font-mono flex justify-between">
-        <span>座標: <span id="coordDisplay">自動抓取中...</span></span>
-        <button id="refreshCoord" class="text-blue-500 underline">重抓目前位置</button>
+      <div class="text-[11px] text-gray-500 font-mono flex justify-between items-center bg-gray-50 p-2 rounded">
+        <span>座標: <span id="coordDisplay">載入中...</span></span>
+        <button id="refreshCoord" type="button" class="text-blue-600 font-sans underline">重新定位</button>
       </div>
 
-      <button id="saveRecord" class="w-full bg-amber-500 active:bg-amber-600 text-white font-bold py-2.5 rounded-lg text-sm shadow">
-        儲存紀錄
+      <button id="saveRecord" type="button" class="w-full bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-bold py-3 rounded-lg text-sm shadow mt-2">
+        確認儲存
       </button>
     </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // --- 1. 地圖初始化 ---
-    const map = L.map('map', { zoomControl: false }).setView([22.9997, 120.2025], 14);
+    const map = L.map('map', { zoomControl: false }).setView([22.9997, 120.2025], 15);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -98,9 +104,8 @@
 
     let activeCoords = { lat: 22.9997, lng: 120.2025 };
     let tempMarker = null;
-    let markersLayer = L.layerGroup().addTo(map);
+    const markersLayer = L.layerGroup().addTo(map);
 
-    // --- 2. 資料存取（LocalStorage） ---
     const STORAGE_KEY = 'food_map_records';
     function getRecords() {
       try {
@@ -115,7 +120,6 @@
       renderMapMarkers();
     }
 
-    // --- 3. 畫面渲染 ---
     function renderMapMarkers() {
       markersLayer.clearLayers();
       const records = getRecords();
@@ -151,39 +155,47 @@
       saveRecords(records);
     };
 
-    // --- 4. 定位與打點操作 ---
     function updateActiveCoord(lat, lng) {
       activeCoords = { lat: Number(lat.toFixed(5)), lng: Number(lng.toFixed(5)) };
       document.getElementById('coordDisplay').innerText = `${activeCoords.lat}, ${activeCoords.lng}`;
     }
 
     function getCurrentPosition(onSuccess) {
-      if (!navigator.geolocation) return alert("裝置不支援定位");
-      navigator.geolocation.getCurrentPosition(pos => {
-        const { latitude, longitude } = pos.coords;
-        map.flyTo([latitude, longitude], 16);
-        updateActiveCoord(latitude, longitude);
-        if (onSuccess) onSuccess(latitude, longitude);
-      }, () => alert("無法抓取 GPS 定位，請檢查瀏覽器權限"));
+      if (!navigator.geolocation) {
+        alert("瀏覽器不支援定位");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const { latitude, longitude } = pos.coords;
+          map.flyTo([latitude, longitude], 16);
+          updateActiveCoord(latitude, longitude);
+          if (onSuccess) onSuccess(latitude, longitude);
+        },
+        err => {
+          alert("定位失敗，請確認已允許瀏覽器取得位置資訊");
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
     }
 
-    // 點擊地圖任意點：直接釘選準備紀錄
+    // 點擊地圖任意處打點
     map.on('click', (e) => {
       const { lat, lng } = e.latlng;
       updateActiveCoord(lat, lng);
       if (tempMarker) map.removeLayer(tempMarker);
-      tempMarker = L.circleMarker([lat, lng], { color: '#f59e0b', radius: 6 }).addTo(map);
+      tempMarker = L.circleMarker([lat, lng], { color: '#f59e0b', radius: 8, fillOpacity: 0.8 }).addTo(map);
       openModal();
     });
 
-    // 頂部「定位」按鈕
+    // 點擊頂部「定位」
     document.getElementById('locateBtn').addEventListener('click', () => {
       getCurrentPosition((lat, lng) => {
-        L.circle([lat, lng], { radius: 25, color: '#3b82f6', fillOpacity: 0.2 }).addTo(map);
+        L.circle([lat, lng], { radius: 25, color: '#3b82f6', fillOpacity: 0.15 }).addTo(map);
       });
     });
 
-    // 頂部「＋ 紀錄」按鈕
+    // 點擊頂部「＋ 紀錄」
     document.getElementById('addBtn').addEventListener('click', () => {
       getCurrentPosition();
       openModal();
@@ -193,12 +205,14 @@
       getCurrentPosition();
     });
 
-    // --- 5. 彈窗表單邏輯 ---
     const modal = document.getElementById('modal');
     function openModal() {
       modal.classList.remove('hidden');
-      document.getElementById('shopName').focus();
+      setTimeout(() => {
+        document.getElementById('shopName').focus();
+      }, 100);
     }
+
     function closeModal() {
       modal.classList.add('hidden');
       if (tempMarker) {
@@ -208,11 +222,16 @@
       document.getElementById('shopName').value = '';
       document.getElementById('shopNotes').value = '';
     }
+
     document.getElementById('closeModal').addEventListener('click', closeModal);
 
     document.getElementById('saveRecord').addEventListener('click', () => {
       const name = document.getElementById('shopName').value.trim();
-      if (!name) return alert("請輸入店家名稱");
+      if (!name) {
+        alert("請輸入店家名稱");
+        document.getElementById('shopName').focus();
+        return;
+      }
 
       const newRecord = {
         name,
@@ -230,7 +249,6 @@
       closeModal();
     });
 
-    // --- 6. 備份匯出 ---
     document.getElementById('backupBtn').addEventListener('click', () => {
       const records = getRecords();
       if (records.length === 0) return alert("目前尚無資料可匯出");
@@ -241,11 +259,13 @@
       a.click();
     });
 
-    // 初次載入定位與繪製
+    // 啟動載入
     renderMapMarkers();
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(pos => {
-        map.setView([pos.coords.latitude, pos.coords.longitude], 15);
+        const { latitude, longitude } = pos.coords;
+        map.setView([latitude, longitude], 16);
+        updateActiveCoord(latitude, longitude);
       }, () => {});
     }
   </script>
